@@ -51,7 +51,7 @@ art("seat3", "amy", [
 
 ```powershell
 cd C:/git-ws
-git clone https://github.com/<owner>/git-pixel-wall.git
+git clone https://github.com/peihsuankang/git-pixel-wall-test.git
 cd git-pixel-wall
 ```
 
