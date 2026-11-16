@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Git 像素牆</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --ink: #1f2430;
+      --ink-2: #5a6272;
+      --line: #dfe3ea;
+      --empty: #eceef2;
+      --warn: #c62828;
+      --warn-soft: #fdecea;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.6 "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+    }
+    header, main, footer { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+    header { padding-top: 32px; }
+    h1 { margin: 0; font-size: 32px; }
+    .sub { margin: 4px 0 0; color: var(--ink-2); }
+    .palette { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 16px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-2); }
+    .palette li { display: flex; align-items: center; gap: 6px; }
+    .palette i { width: 16px; height: 16px; border-radius: 3px; border: 1px solid var(--line); display: inline-block; }
+    .palette b { font-family: Consolas, monospace; color: var(--ink); }
+    .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin: 24px 0 40px; }
+    .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+    .tile.broken { border-color: var(--warn); background: var(--warn-soft); }
+    .pixels { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; aspect-ratio: 1; }
+    .pixels span { background: var(--empty); border-radius: 2px; }
+    .pixels span.bad { background: repeating-linear-gradient(45deg, var(--warn) 0 3px, #fff 3px 6px); }
+    .name { margin: 8px 0 0; font-weight: 700; }
+    .seat { font-weight: 400; color: var(--ink-2); font-size: 13px; }
+    .msg { margin: 4px 0 0; font-size: 12.5px; color: var(--warn); }
+    .placeholder { aspect-ratio: 1; display: grid; place-items: center; text-align: center; color: var(--warn); font-size: 13px; border: 2px dashed var(--warn); border-radius: 6px; padding: 8px; }
+    footer { color: var(--ink-2); font-size: 13px; padding-bottom: 32px; }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- ▼ 標題 -->
+    <h1>Git 像素牆</h1>
+    <!-- ▲ 標題 -->
+    <p class="sub">每一格都是一位同事用 Git 送上來的。字母和顏色的對照：</p>
+    <ul class="palette" id="palette"></ul>
+  </header>
+
+  <main>
+    <div class="wall" id="wall"></div>
+  </main>
+
+  <footer>
+    <p>部門 Git 工作坊。改圖請改 <code>parts/</code> 裡自己的座位檔，改完雙擊這個檔案重新整理就看得到。</p>
+  </footer>
+
+  <!-- 每個座位檔都會呼叫 art()，把圖登記在這裡 -->
+  <script>
+    var ARTS = {};
+    function art(id, name, rows) {
+      ARTS[id] = { name: name, rows: rows };
+    }
+  </script>
+
+  <script src="palette.js"></script>
+
+  <!-- 座位檔：每個檔案分開載入，某個檔案寫錯時，只有那一格會壞掉 -->
+  <script src="parts/seat1.js"></script>
+  <script src="parts/seat2.js"></script>
+  <script src="parts/seat3.js"></script>
+  <script src="parts/seat4.js"></script>
+  <script src="parts/seat5.js"></script>
+  <script src="parts/seat6.js"></script>
+  <script src="parts/seat7.js"></script>
+  <script src="parts/seat8.js"></script>
+  <script src="parts/seat9.js"></script>
+  <script src="parts/seat10.js"></script>
+
+  <!-- 把登記好的圖畫出來（這段不用改） -->
+  <script>
+    (function () {
+      var SEATS = 10, SIZE = 8;
+      var colors = (typeof PALETTE === "object" && PALETTE) ? PALETTE : null;
+
+      var legend = document.getElementById("palette");
+      if (colors) {
+        Object.keys(colors).forEach(function (key) {
+          var li = document.createElement("li");
+          li.innerHTML = '<i></i><b></b>';
+          li.querySelector("i").style.background = colors[key];
+          li.querySelector("b").textContent = key;
+          legend.appendChild(li);
+        });
+        var dot = document.createElement("li");
+        dot.innerHTML = '<i style="background: var(--empty)"></i><b>.</b> 空白';
+        legend.appendChild(dot);
+      } else {
+        legend.innerHTML = '<li style="color: var(--warn)">palette.js 讀取失敗，請檢查是不是少了引號或逗號。</li>';
+        colors = {};
+      }
+
+      var wall = document.getElementById("wall");
+      for (var n = 1; n <= SEATS; n++) {
+        var id = "seat" + n;
+        var tile = document.createElement("section");
+        tile.className = "tile";
+        var data = ARTS[id];
+        var problems = [];
+
+        if (!data || !Array.isArray(data.rows)) {
+          tile.classList.add("broken");
+          tile.innerHTML = '<div class="placeholder">讀不到這張圖<br>parts/' + id + '.js<br>可能少了引號或逗號</div>' +
+            '<p class="name"><span class="seat">座位 ' + n + '</span></p>';
+          wall.appendChild(tile);
+          continue;
+        }
+
+        if (data.rows.length !== SIZE) problems.push("要剛好 8 行，現在是 " + data.rows.length + " 行");
+        var grid = document.createElement("div");
+        grid.className = "pixels";
+        for (var r = 0; r < SIZE; r++) {
+          var row = String(data.rows[r] === undefined ? "" : data.rows[r]);
+          if (data.rows[r] !== undefined && row.length !== SIZE) problems.push("第 " + (r + 1) + " 行要 8 個字，現在是 " + row.length + " 個");
+          for (var c = 0; c < SIZE; c++) {
+            var ch = row.charAt(c);
+            var cell = document.createElement("span");
+            if (ch === "" || ch === ".") {
+              // 空白
+            } else if (colors[ch]) {
+              cell.style.background = colors[ch];
+            } else {
+              cell.className = "bad";
+              problems.push("「" + ch + "」不在調色盤裡");
+            }
+            grid.appendChild(cell);
+          }
+        }
+        tile.appendChild(grid);
+
+        var name = document.createElement("p");
+        name.className = "name";
+        var seatLabel = "座位 " + n;
+        var seat = document.createElement("span");
+        seat.className = "seat";
+        seat.textContent = seatLabel;
+        if (String(data.name) !== seatLabel) name.textContent = String(data.name) + " ";
+        name.appendChild(seat);
+        tile.appendChild(name);
+
+        if (problems.length) {
+          tile.classList.add("broken");
+          var msg = document.createElement("p");
+          msg.className = "msg";
+          msg.textContent = problems.filter(function (p, i) { return problems.indexOf(p) === i; }).join("；");
+          tile.appendChild(msg);
+        }
+        wall.appendChild(tile);
+      }
+    })();
+  </script>
+</body>
+</html>
